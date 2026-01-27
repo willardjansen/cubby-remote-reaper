@@ -1,0 +1,17 @@
+{
+  "name": "Cubby Template Builder for Reaper",
+  "short_name": "Cubby Reaper",
+  "description": "Generate Reaper templates with Reaticulate articulation banks",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1a1a1a",
+  "theme_color": "#ff69b4",
+  "orientation": "landscape",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}
