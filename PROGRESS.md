@@ -1,6 +1,39 @@
 # Cubby Remote for Reaper - Progress
 
-## 2026-01-29: v1.2.1 - Fixed MIDI Output in Packaged App
+## 2026-01-29: v1.2.2 - Splash Screen, GitHub Actions CI/CD
+
+### Added
+- **Splash Screen**: Shows connection URL on startup with user acknowledgment
+  - Displays local IP address for iPad/tablet connection
+  - User clicks "Open in Browser" to continue (not auto-dismiss)
+  - Includes startup status messages
+
+- **GitHub Actions CI/CD**: Fully automated cross-platform builds
+  - **Mac builds** on `macos-latest` with code signing and notarization
+  - **Windows builds** on `windows-latest` (NSIS installer)
+  - Manual trigger: `gh workflow run build.yml --field platform=all`
+  - Automatic builds on version tags (`v*`)
+  - Draft GitHub Release created with all artifacts
+
+### Certificate Setup for GitHub Actions
+1. Export Developer ID certificate with private key as `.p12` from Keychain Access
+2. Base64 encode and store as `CSC_LINK` secret
+3. Store empty password as `CSC_KEY_PASSWORD` (or actual password if set)
+4. Store `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD`, `APPLE_TEAM_ID` secrets
+
+### Build Outputs
+| Platform | File | Size |
+|----------|------|------|
+| Mac Intel | `Cubby Remote Reaper-1.2.1.dmg` | 189 MB |
+| Mac Apple Silicon | `Cubby Remote Reaper-1.2.1-arm64.dmg` | 181 MB |
+| Windows | `Cubby Remote Reaper Setup 1.2.1.exe` | 116 MB |
+
+### Release URL
+https://github.com/willardjansen/cubby-remote-reaper/releases
+
+---
+
+## 2026-01-29: v1.2.0 - Fixed MIDI Output in Packaged App
 
 ### Problem
 MIDI output wasn't working in the packaged Electron app - JZZ library returns empty port lists.
