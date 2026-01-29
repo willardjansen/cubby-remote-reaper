@@ -55,9 +55,7 @@ jobs:
           if-no-files-found: warn
 
   build-mac:
-    # Mac builds disabled in CI - build locally with: npm run electron:build -- --mac
-    # To enable: export Developer ID cert as .p12 with private key, then set CSC_LINK secret
-    if: false && (github.event_name == 'push' || github.event.inputs.platform == 'mac' || github.event.inputs.platform == 'all')
+    if: github.event_name == 'push' || github.event.inputs.platform == 'mac' || github.event.inputs.platform == 'all'
     runs-on: macos-latest
 
     steps:
@@ -124,8 +122,8 @@ jobs:
         run: security delete-keychain $RUNNER_TEMP/app-signing.keychain-db || true
 
   release:
-    needs: [build-windows]
-    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [build-windows, build-mac]
+    if: startsWith(github.ref, 'refs/tags/v') && always()
     runs-on: ubuntu-latest
 
     steps:
