@@ -1,5 +1,8 @@
 name: Build Electron App
 
+permissions:
+  contents: write
+
 on:
   workflow_dispatch:
     inputs:
@@ -52,7 +55,9 @@ jobs:
           if-no-files-found: warn
 
   build-mac:
-    if: github.event_name == 'push' || github.event.inputs.platform == 'mac' || github.event.inputs.platform == 'all'
+    # Mac builds disabled in CI - build locally with: npm run electron:build -- --mac
+    # To enable: export Developer ID cert as .p12 with private key, then set CSC_LINK secret
+    if: false && (github.event_name == 'push' || github.event.inputs.platform == 'mac' || github.event.inputs.platform == 'all')
     runs-on: macos-latest
 
     steps:
@@ -65,6 +70,32 @@ jobs:
           node-version: '20'
           cache: 'npm'
 
+      - name: Install Apple certificate
+        if: ${{ secrets.CSC_LINK != '' }}
+        env:
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+        run: |
+          # Create temporary keychain
+          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
+          KEYCHAIN_PASSWORD=$(openssl rand -base64 32)
+
+          # Decode certificate
+          echo "$CSC_LINK" | base64 --decode > $RUNNER_TEMP/certificate.p12
+
+          # Create and configure keychain
+          security create-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+          security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+
+          # Import certificate
+          security import $RUNNER_TEMP/certificate.p12 -P "$CSC_KEY_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
+          security set-key-partition-list -S apple-tool:,apple: -k "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+          security list-keychain -d user -s $KEYCHAIN_PATH
+
+          # Verify
+          security find-identity -v -p codesigning $KEYCHAIN_PATH
+
       - name: Install dependencies
         run: npm ci
 
@@ -75,8 +106,6 @@ jobs:
         run: npx electron-builder --mac --x64 --arm64
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          CSC_LINK: ${{ secrets.CSC_LINK }}
-          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
@@ -90,9 +119,13 @@ jobs:
             dist/*.zip
           if-no-files-found: warn
 
+      - name: Cleanup keychain
+        if: always()
+        run: security delete-keychain $RUNNER_TEMP/app-signing.keychain-db || true
+
   release:
-    needs: [build-windows, build-mac]
-    if: startsWith(github.ref, 'refs/tags/v') && always()
+    needs: [build-windows]
+    if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
 
     steps:
