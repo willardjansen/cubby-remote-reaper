@@ -13,10 +13,22 @@ exports.default = async function notarizing(context) {
 
   console.log(`Notarizing ${appPath}...`);
 
-  await notarize({
-    appPath,
-    keychainProfile: 'cubby-remote-reaper',
-  });
+  // Use environment variables (GitHub Actions) or keychain profile (local)
+  if (process.env.APPLE_ID && process.env.APPLE_APP_SPECIFIC_PASSWORD && process.env.APPLE_TEAM_ID) {
+    console.log('Using environment variables for notarization (CI mode)');
+    await notarize({
+      appPath,
+      appleId: process.env.APPLE_ID,
+      appleIdPassword: process.env.APPLE_APP_SPECIFIC_PASSWORD,
+      teamId: process.env.APPLE_TEAM_ID,
+    });
+  } else {
+    console.log('Using keychain profile for notarization (local mode)');
+    await notarize({
+      appPath,
+      keychainProfile: 'cubby-remote-reaper',
+    });
+  }
 
   console.log('Notarization complete!');
 };
