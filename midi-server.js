@@ -7,16 +7,53 @@
  * - Receives track changes from Reaper ReaScript via HTTP
  * - Broadcasts track changes to browser clients
  *
- * Usage: node midi-server.js
+ * Usage: node midi-server.js [port]
+ *
+ * If port is not specified, it will auto-find an available port starting from 7101.
+ * Avoids macOS reserved ports (5000, 7000 used by AirPlay).
  */
 
 const WebSocket = require('ws');
 const JZZ = require('jzz');
 const http = require('http');
 const os = require('os');
+const net = require('net');
 
-const WS_PORT = 3001;
-const HTTP_PORT = 3001;  // Same port, different protocol
+// Default port - can be overridden by command line arg or auto-detected
+const DEFAULT_WS_PORT = 7101;
+
+// Ports to avoid on macOS (used by system services)
+const MACOS_RESERVED_PORTS = [3000, 5000, 7000];
+
+// Check if a port is available
+function isPortAvailable(port) {
+  return new Promise((resolve) => {
+    const server = net.createServer();
+    server.once('error', () => resolve(false));
+    server.once('listening', () => {
+      server.close(() => resolve(true));
+    });
+    server.listen(port, '0.0.0.0');
+  });
+}
+
+// Find an available port
+async function findAvailablePort(startPort, maxAttempts = 10) {
+  let port = startPort;
+  for (let i = 0; i < maxAttempts; i++) {
+    while (MACOS_RESERVED_PORTS.includes(port)) {
+      port++;
+    }
+    if (await isPortAvailable(port)) {
+      return port;
+    }
+    port++;
+  }
+  throw new Error(`Could not find available port after ${maxAttempts} attempts`);
+}
+
+// Will be set after finding available port
+let WS_PORT = DEFAULT_WS_PORT;
 
 // Get local IP address
 function getLocalIP() {
@@ -249,10 +286,12 @@ function startServer() {
   // Start the HTTP server (WebSocket is attached to it)
   httpServer.listen(WS_PORT, () => {
     const localIP = getLocalIP();
+    // Output port in a parseable format
+    console.log(`MIDI_SERVER_PORT=${WS_PORT}`);
     console.log(`🌐 Server running on port ${WS_PORT}`);
     console.log(`   - WebSocket: ws://localhost:${WS_PORT}`);
     console.log(`   - HTTP API:  http://localhost:${WS_PORT}/track`);
-    console.log(`\n📱 On your iPad, open: http://${localIP}:3000`);
+    console.log(`\n📱 On your iPad, open: http://${localIP}:7100`);
     console.log('   The app will automatically connect to this MIDI bridge.');
     console.log('\n🎹 In Reaper, run the CubbyRemoteTrackMonitor.lua script');
     console.log('   Location: reaper-scripts/CubbyRemoteTrackMonitor.lua');
@@ -262,6 +301,27 @@ function startServer() {
 
 // Main
 async function main() {
+  // Check for port argument
+  const portArg = process.argv[2];
+  if (portArg) {
+    WS_PORT = parseInt(portArg, 10);
+    if (isNaN(WS_PORT)) {
+      console.error('Invalid port argument');
+      process.exit(1);
+    }
+  } else {
+    // Auto-find available port
+    try {
+      WS_PORT = await findAvailablePort(DEFAULT_WS_PORT);
+      if (WS_PORT !== DEFAULT_WS_PORT) {
+        console.log(`ℹ️  Port ${DEFAULT_WS_PORT} was busy, using port ${WS_PORT}`);
+      }
+    } catch (err) {
+      console.error('Failed to find available port:', err.message);
+      process.exit(1);
+    }
+  }
+
   await initMidi();
   startServer();
 }

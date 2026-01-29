@@ -1,6 +1,6 @@
 {
   "name": "cubby-remote-reaper",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "author": {
     "name": "Willard Jansen",
     "email": "willardjansen@me.com"
@@ -9,13 +9,13 @@
   "private": true,
   "main": "electron/main.js",
   "scripts": {
-    "dev": "next dev --hostname 0.0.0.0",
+    "dev": "next dev --hostname 0.0.0.0 --port 7100",
     "build": "next build",
-    "start": "next start --hostname 0.0.0.0",
+    "start": "next start --hostname 0.0.0.0 --port 7100",
     "lint": "next lint",
     "midi": "node midi-server.js",
     "all": "npm run midi & npm run dev",
-    "electron:dev": "concurrently -k \"npm run dev\" \"wait-on http://localhost:3000 && electron .\"",
+    "electron:dev": "concurrently -k \"npm run dev\" \"wait-on http://localhost:7100 && electron .\"",
     "electron:build": "node build-electron.js",
     "electron:pack": "node build-electron.js --dir",
     "postinstall": "electron-builder install-app-deps"
