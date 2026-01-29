@@ -15,6 +15,7 @@
 
 const WebSocket = require('ws');
 const JZZ = require('jzz');
+const midi = require('midi');
 const http = require('http');
 const os = require('os');
 const net = require('net');
@@ -80,38 +81,46 @@ async function initMidi() {
   console.log('\n🎹 Reaper MIDI Bridge Server');
   console.log('============================\n');
 
-  const info = JZZ().info();
-  const outputs = info.outputs;
-  const inputs = info.inputs;
+  // Use 'midi' package for output (more reliable in Electron than JZZ)
+  const midiOutput = new midi.Output();
+  const midiInput = new midi.Input();
+
+  const outputCount = midiOutput.getPortCount();
+  const inputCount = midiInput.getPortCount();
 
   // List available MIDI ports
   console.log('Available MIDI outputs:');
-  outputs.forEach((port, i) => {
-    console.log(`  ${i + 1}. ${port.name}`);
-  });
+  for (let i = 0; i < outputCount; i++) {
+    console.log(`  ${i}: ${midiOutput.getPortName(i)}`);
+  }
   console.log('');
 
   console.log('Available MIDI inputs:');
-  inputs.forEach((port, i) => {
-    console.log(`  ${i + 1}. ${port.name}`);
-  });
+  for (let i = 0; i < inputCount; i++) {
+    console.log(`  ${i}: ${midiInput.getPortName(i)}`);
+  }
   console.log('');
 
   // --- Set up OUTPUT (Browser → Reaper) ---
   // Use IAC Driver on macOS - can share with Cubase setup
   const preferredOutNames = ['ArticulationRemote', 'IAC Driver - Bus 1', 'IAC Driver', 'Browser to Cubase', 'Browser to Reaper', 'loopMIDI'];
+  let outputPortIndex = -1;
 
   for (const preferred of preferredOutNames) {
-    const found = outputs.find(p => p.name.toLowerCase().includes(preferred.toLowerCase()));
-    if (found) {
-      selectedOutPortName = found.name;
-      break;
+    for (let i = 0; i < outputCount; i++) {
+      if (midiOutput.getPortName(i).toLowerCase().includes(preferred.toLowerCase())) {
+        outputPortIndex = i;
+        selectedOutPortName = midiOutput.getPortName(i);
+        break;
+      }
     }
+    if (outputPortIndex >= 0) break;
   }
 
-  if (selectedOutPortName) {
+  if (outputPortIndex >= 0) {
     try {
-      midiOut = JZZ().openMidiOut(selectedOutPortName);
+      midiOutput.openPort(outputPortIndex);
+      midiOut = midiOutput;
       console.log(`✅ Output: ${selectedOutPortName} (Browser → Reaper)`);
     } catch (e) {
       console.error(`❌ Failed to open MIDI output: ${e.message}`);
@@ -178,10 +187,12 @@ function sendMidi(status, data1, data2) {
 
   if (midiOut) {
     try {
-      midiOut.send(msg);
+      midiOut.sendMessage(msg);
     } catch (e) {
       console.error(`   Error: ${e.message}`);
     }
+  } else {
+    console.warn('   ⚠️ No MIDI output - message not sent');
   }
 }
 

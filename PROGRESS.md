@@ -1,5 +1,18 @@
 # Cubby Remote for Reaper - Progress
 
+## 2026-01-29: v1.2.1 - Fixed MIDI Output in Packaged App
+
+### Problem
+MIDI output wasn't working in the packaged Electron app - JZZ library returns empty port lists.
+
+### Solution
+- Added `midi` package dependency
+- Switched from `JZZ` to `midi` package for MIDI output (more reliable in Electron)
+- Updated `sendMidi()` to use `midiOut.sendMessage()`
+- Added README with setup and troubleshooting docs
+
+---
+
 ## Overview
 
 Cubby Remote for Reaper is a browser-based articulation switching app that integrates with Reaper and Reaticulate. When you select a track in Reaper that has a Reaticulate bank assigned, the browser automatically displays the corresponding articulations as clickable buttons.
