@@ -43,3 +43,5 @@ next-env.d.ts
 *.swp
 *.swo
 CLAUDE.md
+*.spec.md
+*-spec.md
