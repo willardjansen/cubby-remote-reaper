@@ -69,7 +69,6 @@ jobs:
           cache: 'npm'
 
       - name: Install Apple certificate
-        if: ${{ secrets.CSC_LINK != '' }}
         env:
           CSC_LINK: ${{ secrets.CSC_LINK }}
           CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
