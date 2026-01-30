@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { ArticulationGrid } from '@/components/ArticulationGrid';
-import About from '@/components/About';
 import {
   ArticulationSet,
   createDemoArticulationSet,
@@ -385,9 +384,6 @@ export default function Home() {
           </p>
         </div>
       )}
-
-      {/* About Button */}
-      <About />
     </main>
   );
 }
